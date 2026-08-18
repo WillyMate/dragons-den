@@ -185,3 +185,35 @@ code {
     animation: none !important;
   }
 }
+
+.post-review {
+  width: min(900px, 92vw);
+  margin: 2rem auto;
+  text-align: left;
+}
+
+.post-review h1 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.posts {
+  display: grid;
+  gap: 1rem;
+}
+
+.post-card {
+  background: #1a1a1a;
+  border: 2px solid #fbf0df;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.post-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.post-card p {
+  margin: 0;
+}
