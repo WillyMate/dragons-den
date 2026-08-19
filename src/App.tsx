@@ -53,6 +53,7 @@ export function App() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -91,20 +92,55 @@ export function App() {
     };
   }, []);
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredPosts = posts.filter(post => {
+    if (!normalizedSearch) {
+      return true;
+    }
+
+    const haystack = `${post.title} ${post.body}`.toLowerCase();
+    return haystack.includes(normalizedSearch);
+  });
+
   return (
     <div className="post-review">
-      <h1>DummyJSON Posts</h1>
+      <header className="top-bar">
+        <div className="top-bar__inner">
+          <h1>Y' Dragon Den</h1>
+          <label className="search-bar" htmlFor="post-search">
+            <span className="search-bar__label">Search posts</span>
+            <input
+              id="post-search"
+              type="search"
+              value={searchTerm}
+              onChange={event => setSearchTerm(event.target.value)}
+              placeholder="Search title or content..."
+            />
+          </label>
+        </div>
+      </header>
+
       {loading && <p>Loading posts...</p>}
       {error && <p>{error}</p>}
       {!loading && !error && (
-        <div className="posts">
-          {posts.map(post => (
-            <article key={post.id} className="post-card">
-              <h2>{post.title}</h2>
-              <p>{post.body}</p>
-            </article>
-          ))}
-        </div>
+        <>
+          <p className="results-count">
+            {filteredPosts.length} post{filteredPosts.length === 1 ? "" : "s"} found
+          </p>
+
+          {filteredPosts.length === 0 ? (
+            <div className="empty-state">No posts match your search.</div>
+          ) : (
+            <div className="posts">
+              {filteredPosts.map(post => (
+                <article key={post.id} className="post-card">
+                  <h2>{post.title}</h2>
+                  <p>{post.body}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -165,13 +165,71 @@ code {
 
 .post-review {
   width: min(900px, 92vw);
-  margin: 2rem auto;
+  margin: 0 auto 2rem;
+  padding-top: 6.5rem;
   text-align: left;
+}
+
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 100%;
+  padding: 1rem 0 0.75rem;
+  backdrop-filter: blur(8px);
+  background: rgba(36, 36, 36, 0.9);
+  border-bottom: 1px solid rgba(251, 240, 223, 0.2);
+}
+
+.top-bar__inner {
+  width: min(900px, 92vw);
+  margin: 0 auto;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .post-review h1 {
   font-size: 2rem;
-  margin-bottom: 1rem;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.search-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: min(420px, 58vw);
+}
+
+.search-bar__label {
+  color: rgba(251, 240, 223, 0.75);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.search-bar input {
+  width: 100%;
+  border: 2px solid rgba(251, 240, 223, 0.5);
+  background: rgba(26, 26, 26, 0.9);
+  color: #fbf0df;
+  border-radius: 10px;
+  padding: 0.8rem 0.9rem;
+  font-size: 1rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.search-bar input:focus {
+  border-color: #f3d5a3;
+  box-shadow: 0 0 0 3px rgba(243, 213, 163, 0.2);
+}
+
+.results-count {
+  margin: 1rem 0 0.75rem;
+  color: rgba(251, 240, 223, 0.8);
 }
 
 .posts {
@@ -193,4 +251,28 @@ code {
 
 .post-card p {
   margin: 0;
+}
+
+.empty-state {
+  background: rgba(26, 26, 26, 0.9);
+  border: 2px solid rgba(251, 240, 223, 0.5);
+  border-radius: 12px;
+  padding: 1.25rem;
+  color: rgba(251, 240, 223, 0.8);
+}
+
+@media (max-width: 640px) {
+  .top-bar__inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-bar {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .post-review {
+    padding-top: 8.25rem;
+  }
 }
