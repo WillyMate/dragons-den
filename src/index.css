@@ -232,6 +232,60 @@ code {
   color: rgba(251, 240, 223, 0.8);
 }
 
+.create-post-form {
+  margin: 1rem 0;
+  display: grid;
+  gap: 0.6rem;
+  background: rgba(26, 26, 26, 0.9);
+  border: 2px solid rgba(251, 240, 223, 0.55);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.create-post-form h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.create-post-form input,
+.create-post-form textarea {
+  width: 100%;
+  border: 2px solid rgba(251, 240, 223, 0.5);
+  background: rgba(26, 26, 26, 0.9);
+  color: #fbf0df;
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  font-size: 0.95rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.create-post-form input:focus,
+.create-post-form textarea:focus {
+  border-color: #f3d5a3;
+  box-shadow: 0 0 0 3px rgba(243, 213, 163, 0.2);
+}
+
+.create-post-form button {
+  justify-self: start;
+  background: #fbf0df;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.create-post-form button:hover {
+  background: #f3d5a3;
+}
+
+.create-post-form__error {
+  margin: 0;
+  color: #ffb4b4;
+}
+
 .posts {
   display: grid;
   gap: 1rem;
@@ -253,8 +307,20 @@ code {
   margin: 0;
 }
 
-.comments-toggle {
+.post-source {
+  margin-top: 0.55rem !important;
+  color: rgba(251, 240, 223, 0.72);
+  font-size: 0.85rem;
+}
+
+.post-actions {
   margin-top: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.comments-toggle {
   background: #fbf0df;
   color: #1a1a1a;
   border: none;
@@ -266,6 +332,20 @@ code {
 
 .comments-toggle:hover {
   background: #f3d5a3;
+}
+
+.delete-post {
+  background: transparent;
+  color: #ffb4b4;
+  border: 1px solid #ffb4b4;
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delete-post:hover {
+  background: rgba(255, 180, 180, 0.15);
 }
 
 .comments-panel {

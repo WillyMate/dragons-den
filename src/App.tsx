@@ -1,5 +1,5 @@
 import "./index.css";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 type Post = {
   id: number;
@@ -30,6 +30,7 @@ type PostCommentsResponse = {
 };
 
 const DUMMY_JSON_POSTS_KEY = "dummyjson-posts";
+const LOCAL_POSTS_KEY = "local-posts";
 
 function isPost(value: unknown): value is Post {
   if (typeof value !== "object" || value === null) {
@@ -68,10 +69,10 @@ function isPostComment(value: unknown): value is PostComment {
   );
 }
 
-function parseCachedPosts(raw: string): Post[] {
+function parseStoredPosts(raw: string): Post[] {
   const parsed: unknown = JSON.parse(raw);
   if (!Array.isArray(parsed) || !parsed.every(isPost)) {
-    throw new Error("Cached posts have an invalid format.");
+    throw new Error("Stored posts have an invalid format.");
   }
   return parsed;
 }
@@ -115,10 +116,14 @@ async function fetchCommentsForPost(postId: number): Promise<PostComment[]> {
 }
 
 export function App() {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [dummyPosts, setDummyPosts] = useState<Post[]>([]);
+  const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [newPostTitle, setNewPostTitle] = useState("");
+  const [newPostBody, setNewPostBody] = useState("");
+  const [newPostError, setNewPostError] = useState<string | null>(null);
   const [expandedPostIds, setExpandedPostIds] = useState<Set<number>>(new Set());
   const [commentsByPostId, setCommentsByPostId] = useState<Record<number, PostComment[]>>({});
   const [commentsLoadingByPostId, setCommentsLoadingByPostId] = useState<Record<number, boolean>>({});
@@ -128,12 +133,24 @@ export function App() {
     let isMounted = true;
 
     const loadPosts = async () => {
+      const storedLocalPosts = localStorage.getItem(LOCAL_POSTS_KEY);
+      if (storedLocalPosts) {
+        try {
+          const parsedLocalPosts = parseStoredPosts(storedLocalPosts);
+          if (isMounted) {
+            setLocalPosts(parsedLocalPosts);
+          }
+        } catch {
+          localStorage.removeItem(LOCAL_POSTS_KEY);
+        }
+      }
+
       try {
         const cachedPosts = localStorage.getItem(DUMMY_JSON_POSTS_KEY);
         if (cachedPosts) {
-          const parsedPosts = parseCachedPosts(cachedPosts);
+          const parsedPosts = parseStoredPosts(cachedPosts);
           if (isMounted) {
-            setPosts(parsedPosts);
+            setDummyPosts(parsedPosts);
           }
           return;
         }
@@ -141,7 +158,7 @@ export function App() {
         const fetchedPosts = await fetchPosts();
         localStorage.setItem(DUMMY_JSON_POSTS_KEY, JSON.stringify(fetchedPosts));
         if (isMounted) {
-          setPosts(fetchedPosts);
+          setDummyPosts(fetchedPosts);
         }
       } catch (loadError) {
         localStorage.removeItem(DUMMY_JSON_POSTS_KEY);
@@ -161,8 +178,10 @@ export function App() {
     };
   }, []);
 
+  const allPosts = [...localPosts, ...dummyPosts];
+  const localPostIds = new Set(localPosts.map(post => post.id));
   const normalizedSearch = searchTerm.trim().toLowerCase();
-  const filteredPosts = posts.filter(post => {
+  const filteredPosts = allPosts.filter(post => {
     if (!normalizedSearch) {
       return true;
     }
@@ -170,6 +189,61 @@ export function App() {
     const haystack = `${post.title} ${post.body}`.toLowerCase();
     return haystack.includes(normalizedSearch);
   });
+
+  const handleCreatePost = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const title = newPostTitle.trim();
+    const body = newPostBody.trim();
+    if (!title || !body) {
+      setNewPostError("Both title and content are required.");
+      return;
+    }
+
+    const createdPost: Post = {
+      id: Date.now(),
+      title,
+      body
+    };
+
+    setLocalPosts(current => {
+      const next = [createdPost, ...current];
+      localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(next));
+      return next;
+    });
+
+    setNewPostTitle("");
+    setNewPostBody("");
+    setNewPostError(null);
+  };
+
+  const handleDeleteLocalPost = (postId: number) => {
+    setLocalPosts(current => {
+      const next = current.filter(post => post.id !== postId);
+      localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(next));
+      return next;
+    });
+    setExpandedPostIds(current => {
+      const next = new Set(current);
+      next.delete(postId);
+      return next;
+    });
+    setCommentsByPostId(current => {
+      const next = { ...current };
+      delete next[postId];
+      return next;
+    });
+    setCommentsLoadingByPostId(current => {
+      const next = { ...current };
+      delete next[postId];
+      return next;
+    });
+    setCommentsErrorByPostId(current => {
+      const next = { ...current };
+      delete next[postId];
+      return next;
+    });
+  };
 
   const toggleCommentsForPost = async (postId: number) => {
     const isExpanded = expandedPostIds.has(postId);
@@ -187,6 +261,10 @@ export function App() {
       next.add(postId);
       return next;
     });
+
+    if (localPostIds.has(postId)) {
+      return;
+    }
 
     if (commentsByPostId[postId] || commentsLoadingByPostId[postId]) {
       return;
@@ -234,6 +312,26 @@ export function App() {
       {error && <p>{error}</p>}
       {!loading && !error && (
         <>
+          <form className="create-post-form" onSubmit={handleCreatePost}>
+            <h2>Create your post</h2>
+            <input
+              type="text"
+              value={newPostTitle}
+              onChange={event => setNewPostTitle(event.target.value)}
+              placeholder="Post title"
+              aria-label="Post title"
+            />
+            <textarea
+              value={newPostBody}
+              onChange={event => setNewPostBody(event.target.value)}
+              placeholder="Post content"
+              aria-label="Post content"
+              rows={4}
+            />
+            {newPostError && <p className="create-post-form__error">{newPostError}</p>}
+            <button type="submit">Add post</button>
+          </form>
+
           <p className="results-count">
             {filteredPosts.length} post{filteredPosts.length === 1 ? "" : "s"} found
           </p>
@@ -242,44 +340,57 @@ export function App() {
             <div className="empty-state">No posts match your search.</div>
           ) : (
             <div className="posts">
-              {filteredPosts.map(post => (
-                <article key={post.id} className="post-card">
-                  <h2>{post.title}</h2>
-                  <p>{post.body}</p>
-                  <button
-                    type="button"
-                    className="comments-toggle"
-                    onClick={() => {
-                      void toggleCommentsForPost(post.id);
-                    }}
-                  >
-                    {expandedPostIds.has(post.id) ? "Hide comments" : "Show comments"}
-                  </button>
-                  {expandedPostIds.has(post.id) && (
-                    <section className="comments-panel" aria-live="polite">
-                      {commentsLoadingByPostId[post.id] ? (
-                        <p className="comments-status">Loading comments...</p>
-                      ) : commentsErrorByPostId[post.id] ? (
-                        <p className="comments-error">{commentsErrorByPostId[post.id]}</p>
-                      ) : commentsByPostId[post.id]?.length ? (
-                        <ul className="comments-list">
-                          {commentsByPostId[post.id].map(comment => (
-                            <li key={comment.id} className="comment-card">
-                              <p className="comment-body">{comment.body}</p>
-                              <p className="comment-meta">
-                                {comment.user.fullName} (@{comment.user.username}) · {comment.likes} like
-                                {comment.likes === 1 ? "" : "s"}
-                              </p>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="comments-status">No comments for this post.</p>
+              {filteredPosts.map(post => {
+                const isLocalPost = localPostIds.has(post.id);
+                return (
+                  <article key={post.id} className="post-card">
+                    <h2>{post.title}</h2>
+                    <p>{post.body}</p>
+                    {isLocalPost && <p className="post-source">Your local post</p>}
+                    <div className="post-actions">
+                      <button
+                        type="button"
+                        className="comments-toggle"
+                        onClick={() => {
+                          void toggleCommentsForPost(post.id);
+                        }}
+                      >
+                        {expandedPostIds.has(post.id) ? "Hide comments" : "Show comments"}
+                      </button>
+                      {isLocalPost && (
+                        <button type="button" className="delete-post" onClick={() => handleDeleteLocalPost(post.id)}>
+                          Delete post
+                        </button>
                       )}
-                    </section>
-                  )}
-                </article>
-              ))}
+                    </div>
+                    {expandedPostIds.has(post.id) && (
+                      <section className="comments-panel" aria-live="polite">
+                        {isLocalPost ? (
+                          <p className="comments-status">DummyJSON comments are only available for fetched posts.</p>
+                        ) : commentsLoadingByPostId[post.id] ? (
+                          <p className="comments-status">Loading comments...</p>
+                        ) : commentsErrorByPostId[post.id] ? (
+                          <p className="comments-error">{commentsErrorByPostId[post.id]}</p>
+                        ) : commentsByPostId[post.id]?.length ? (
+                          <ul className="comments-list">
+                            {commentsByPostId[post.id].map(comment => (
+                              <li key={comment.id} className="comment-card">
+                                <p className="comment-body">{comment.body}</p>
+                                <p className="comment-meta">
+                                  {comment.user.fullName} (@{comment.user.username}) · {comment.likes} like
+                                  {comment.likes === 1 ? "" : "s"}
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="comments-status">No comments for this post.</p>
+                        )}
+                      </section>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           )}
         </>
