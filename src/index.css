@@ -253,6 +253,62 @@ code {
   margin: 0;
 }
 
+.comments-toggle {
+  margin-top: 0.85rem;
+  background: #fbf0df;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.comments-toggle:hover {
+  background: #f3d5a3;
+}
+
+.comments-panel {
+  margin-top: 0.75rem;
+  border-top: 1px solid rgba(251, 240, 223, 0.3);
+  padding-top: 0.75rem;
+}
+
+.comments-status,
+.comments-error {
+  margin: 0;
+  color: rgba(251, 240, 223, 0.8);
+}
+
+.comments-error {
+  color: #ffb4b4;
+}
+
+.comments-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.comment-card {
+  background: rgba(251, 240, 223, 0.08);
+  border: 1px solid rgba(251, 240, 223, 0.25);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+}
+
+.comment-body {
+  margin: 0 0 0.35rem;
+}
+
+.comment-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(251, 240, 223, 0.72);
+}
+
 .empty-state {
   background: rgba(26, 26, 26, 0.9);
   border: 2px solid rgba(251, 240, 223, 0.5);

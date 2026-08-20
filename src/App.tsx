@@ -7,8 +7,26 @@ type Post = {
   body: string;
 };
 
+type CommentUser = {
+  id: number;
+  username: string;
+  fullName: string;
+};
+
+type PostComment = {
+  id: number;
+  body: string;
+  postId: number;
+  likes: number;
+  user: CommentUser;
+};
+
 type PostsResponse = {
   posts: Post[];
+};
+
+type PostCommentsResponse = {
+  comments: PostComment[];
 };
 
 const DUMMY_JSON_POSTS_KEY = "dummyjson-posts";
@@ -20,6 +38,34 @@ function isPost(value: unknown): value is Post {
 
   const candidate = value as Record<string, unknown>;
   return typeof candidate.id === "number" && typeof candidate.title === "string" && typeof candidate.body === "string";
+}
+
+function isCommentUser(value: unknown): value is CommentUser {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === "number" &&
+    typeof candidate.username === "string" &&
+    typeof candidate.fullName === "string"
+  );
+}
+
+function isPostComment(value: unknown): value is PostComment {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === "number" &&
+    typeof candidate.body === "string" &&
+    typeof candidate.postId === "number" &&
+    typeof candidate.likes === "number" &&
+    isCommentUser(candidate.user)
+  );
 }
 
 function parseCachedPosts(raw: string): Post[] {
@@ -49,11 +95,34 @@ async function fetchPosts(): Promise<Post[]> {
   return posts;
 }
 
+async function fetchCommentsForPost(postId: number): Promise<PostComment[]> {
+  const response = await fetch(`https://dummyjson.com/posts/${postId}/comments`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch comments for post ${postId} (${response.status})`);
+  }
+
+  const data: unknown = await response.json();
+  if (typeof data !== "object" || data === null || !("comments" in data)) {
+    throw new Error("Received an invalid comments response from DummyJSON.");
+  }
+
+  const comments = (data as PostCommentsResponse).comments;
+  if (!Array.isArray(comments) || !comments.every(isPostComment)) {
+    throw new Error("Received comments with an invalid format.");
+  }
+
+  return comments;
+}
+
 export function App() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedPostIds, setExpandedPostIds] = useState<Set<number>>(new Set());
+  const [commentsByPostId, setCommentsByPostId] = useState<Record<number, PostComment[]>>({});
+  const [commentsLoadingByPostId, setCommentsLoadingByPostId] = useState<Record<number, boolean>>({});
+  const [commentsErrorByPostId, setCommentsErrorByPostId] = useState<Record<number, string>>({});
 
   useEffect(() => {
     let isMounted = true;
@@ -102,6 +171,47 @@ export function App() {
     return haystack.includes(normalizedSearch);
   });
 
+  const toggleCommentsForPost = async (postId: number) => {
+    const isExpanded = expandedPostIds.has(postId);
+    if (isExpanded) {
+      setExpandedPostIds(current => {
+        const next = new Set(current);
+        next.delete(postId);
+        return next;
+      });
+      return;
+    }
+
+    setExpandedPostIds(current => {
+      const next = new Set(current);
+      next.add(postId);
+      return next;
+    });
+
+    if (commentsByPostId[postId] || commentsLoadingByPostId[postId]) {
+      return;
+    }
+
+    setCommentsLoadingByPostId(current => ({ ...current, [postId]: true }));
+    setCommentsErrorByPostId(current => {
+      const next = { ...current };
+      delete next[postId];
+      return next;
+    });
+
+    try {
+      const comments = await fetchCommentsForPost(postId);
+      setCommentsByPostId(current => ({ ...current, [postId]: comments }));
+    } catch (loadError) {
+      setCommentsErrorByPostId(current => ({
+        ...current,
+        [postId]: loadError instanceof Error ? loadError.message : String(loadError)
+      }));
+    } finally {
+      setCommentsLoadingByPostId(current => ({ ...current, [postId]: false }));
+    }
+  };
+
   return (
     <div className="post-review">
       <header className="top-bar">
@@ -136,6 +246,38 @@ export function App() {
                 <article key={post.id} className="post-card">
                   <h2>{post.title}</h2>
                   <p>{post.body}</p>
+                  <button
+                    type="button"
+                    className="comments-toggle"
+                    onClick={() => {
+                      void toggleCommentsForPost(post.id);
+                    }}
+                  >
+                    {expandedPostIds.has(post.id) ? "Hide comments" : "Show comments"}
+                  </button>
+                  {expandedPostIds.has(post.id) && (
+                    <section className="comments-panel" aria-live="polite">
+                      {commentsLoadingByPostId[post.id] ? (
+                        <p className="comments-status">Loading comments...</p>
+                      ) : commentsErrorByPostId[post.id] ? (
+                        <p className="comments-error">{commentsErrorByPostId[post.id]}</p>
+                      ) : commentsByPostId[post.id]?.length ? (
+                        <ul className="comments-list">
+                          {commentsByPostId[post.id].map(comment => (
+                            <li key={comment.id} className="comment-card">
+                              <p className="comment-body">{comment.body}</p>
+                              <p className="comment-meta">
+                                {comment.user.fullName} (@{comment.user.username}) · {comment.likes} like
+                                {comment.likes === 1 ? "" : "s"}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="comments-status">No comments for this post.</p>
+                      )}
+                    </section>
+                  )}
                 </article>
               ))}
             </div>
